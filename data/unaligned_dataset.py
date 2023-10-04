@@ -3,6 +3,26 @@ from data.base_dataset import BaseDataset, get_transform
 from data.image_folder import make_dataset
 from PIL import Image
 import random
+import numpy as np
+import torch
+
+def pad_array(input_array):
+
+# Check if the input array has the correct shape
+    if input_array.shape == (1, 91, 109):
+        # Define the target shape
+        target_shape = (1, 92, 112)
+
+        # Calculate the padding needed for each dimension
+        padding = tuple((0, target - initial) for target, initial in zip(target_shape, input_array.shape))
+
+        # Use numpy.pad to add the specified padding
+        result_array = np.pad(input_array, padding, mode='constant')
+
+        return result_array
+    else:
+        raise ValueError("Input array shape should be (1, 91, 109)")
+
 
 
 class UnalignedDataset(BaseDataset):
@@ -15,6 +35,7 @@ class UnalignedDataset(BaseDataset):
     Similarly, you need to prepare two directories:
     '/path/to/data/testA' and '/path/to/data/testB' during test time.
     """
+
 
     def __init__(self, opt):
         """Initialize this dataset class.
@@ -54,11 +75,30 @@ class UnalignedDataset(BaseDataset):
         else:   # randomize the index for domain B to avoid fixed pairs.
             index_B = random.randint(0, self.B_size - 1)
         B_path = self.B_paths[index_B]
-        A_img = Image.open(A_path).convert('RGB')
-        B_img = Image.open(B_path).convert('RGB')
+        #A_img = Image.open(A_path).convert('RGB')
+        #B_img = Image.open(B_path).convert('RGB')
         # apply image transformation
-        A = self.transform_A(A_img)
-        B = self.transform_B(B_img)
+        #A = self.transform_A(A_img)
+        #B = self.transform_B(B_img)
+        
+        #print(A_path)
+        #print(B_path)
+        
+        A = np.array([np.load(A_path)['arr_0']]).astype(np.float32)
+        A = pad_array(A)
+        #print(A.shape)
+        B = np.array([np.load(B_path)['arr_0']]).astype(np.float32)	  
+        B = pad_array(B)
+        #print(B.shape)
+
+        #A = np.array([np.load(A_path)['data']]).astype(np.float32)
+        #B = np.array([np.load(B_path)['data']]).astype(np.float32)
+        
+        #A = np.load(A_path)
+        #B = np.load(B_path)	 
+
+        #A = torch.from_numpy(A_img)
+        #B = torch.from_numpy(B_img)        
 
         return {'A': A, 'B': B, 'A_paths': A_path, 'B_paths': B_path}
 
