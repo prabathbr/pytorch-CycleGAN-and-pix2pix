@@ -194,6 +194,15 @@ class Visualizer():
                 image_numpy = util.tensor2im(image)
                 img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.png' % (epoch, label))
                 util.save_image(image_numpy, img_path)
+                
+                #save results in NPZ
+                input_image = image
+                image_tensor = input_image.data
+                image_numpy = image_tensor[0].cpu().float().numpy()
+                image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1)
+                
+                npz_img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.npz' % (epoch, label))                
+                np.savez(npz_img_path, image_numpy)
 
             # update website
             webpage = html.HTML(self.web_dir, 'Experiment name = %s' % self.name, refresh=1)
