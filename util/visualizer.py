@@ -5,6 +5,7 @@ import ntpath
 import time
 from . import util, html
 from subprocess import Popen, PIPE
+from tifffile import imwrite
 
 
 try:
@@ -45,6 +46,26 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256, use_w
         ims.append(image_name)
         txts.append(label)
         links.append(image_name)
+        
+        #save results in NPZ
+        input_image = im_data
+        image_tensor = input_image.data
+        image_numpy_original = image_tensor[0].cpu().float().numpy()
+        image_numpy = (np.transpose(image_numpy_original, (1, 2, 0)))
+        #image_numpy = (np.transpose(image_numpy_original, (1, 2, 0)) + 1)        
+        
+        npz_img_path = os.path.join(image_dir, '%s_%s.npz' % (name, label))     
+        #print("npz_img_path: " + npz_img_path)  
+        #print(image_numpy.shape)                
+        np.savez(npz_img_path, image_numpy)
+        
+        # Save the result in the output folder
+        tiff_img_path = os.path.join(image_dir, '%s_%s.tiff' % (name, label))
+        #print("tiff_img_path: " + tiff_img_path)
+        #print(image_numpy_original.shape) 
+        imwrite(tiff_img_path, image_numpy_original)
+                
+                
         if use_wandb:
             ims_dict[label] = wandb.Image(im)
     webpage.add_images(ims, txts, links, width=width)
@@ -137,6 +158,12 @@ class Visualizer():
                 idx = 0
                 for label, image in visuals.items():
                     image_numpy = util.tensor2im(image)
+                    
+                    #input_image = image
+                    #image_tensor = input_image.data
+                    #image_numpy_original = image_tensor[0].cpu().float().numpy()
+                    #image_numpy = (np.transpose(image_numpy_original, (1, 2, 0)) + 1)
+                    
                     label_html_row += '<td>%s</td>' % label
                     images.append(image_numpy.transpose([2, 0, 1]))
                     idx += 1
@@ -145,6 +172,7 @@ class Visualizer():
                         label_html_row = ''
                 white_image = np.ones_like(image_numpy.transpose([2, 0, 1])) * 255
                 while idx % ncols != 0:
+                    #images.append(image_numpy) ## changed
                     images.append(white_image)
                     label_html_row += '<td></td>'
                     idx += 1
@@ -198,11 +226,21 @@ class Visualizer():
                 #save results in NPZ
                 input_image = image
                 image_tensor = input_image.data
-                image_numpy = image_tensor[0].cpu().float().numpy()
-                image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1)
+                image_numpy_original = image_tensor[0].cpu().float().numpy()
+                image_numpy = (np.transpose(image_numpy_original, (1, 2, 0)))
+                #image_numpy = (np.transpose(image_numpy_original, (1, 2, 0)) + 1)
                 
-                npz_img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.npz' % (epoch, label))                
+                npz_img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.npz' % (epoch, label))     
+                #print("npz_img_path: " + npz_img_path)  
+                #print(image_numpy.shape)                
                 np.savez(npz_img_path, image_numpy)
+                
+                # Save the result in the output folder
+                tiff_img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.tiff' % (epoch, label))
+                #print("tiff_img_path: " + tiff_img_path)
+                #print(image_numpy_original.shape) 
+                imwrite(tiff_img_path, image_numpy_original)
+                
 
             # update website
             webpage = html.HTML(self.web_dir, 'Experiment name = %s' % self.name, refresh=1)
@@ -212,7 +250,7 @@ class Visualizer():
 
                 for label, image_numpy in visuals.items():
                     image_numpy = util.tensor2im(image)
-                    img_path = 'epoch%.3d_%s.png' % (n, label)
+                    img_path = 'epoch%.3d_%s.tiff' % (n, label)
                     ims.append(img_path)
                     txts.append(label)
                     links.append(img_path)
